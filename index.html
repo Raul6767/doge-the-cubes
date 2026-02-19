@@ -71,16 +71,33 @@ function initGame() {
   gameOver = false;
 }
 
+/* ✅ UPDATED SAVE FUNCTION (NO DUPLICATES) */
 function saveScore(finalScore) {
-  const name = prompt("New Score! Enter your name:");
+  const name = prompt("Enter your name:");
 
   if (!name) return;
 
-  leaderboard.push({ name: name, score: finalScore });
+  const cleanName = name.trim();
+
+  const existingIndex = leaderboard.findIndex(
+    entry => entry.name.toLowerCase() === cleanName.toLowerCase()
+  );
+
+  if (existingIndex !== -1) {
+    // Update only if higher
+    if (finalScore > leaderboard[existingIndex].score) {
+      leaderboard[existingIndex].score = finalScore;
+    }
+  } else {
+    leaderboard.push({ name: cleanName, score: finalScore });
+  }
+
   leaderboard.sort((a, b) => b.score - a.score);
   leaderboard = leaderboard.slice(0, 5);
 
   localStorage.setItem("dogeLeaderboard", JSON.stringify(leaderboard));
+
+  drawLeaderboard();
 }
 
 function drawLeaderboard() {
@@ -144,7 +161,6 @@ function drawCubes() {
 function endGame() {
   gameOver = true;
   saveScore(score);
-  drawLeaderboard();
   alert("Game Over! Final Score: " + score);
   initGame();
 }
