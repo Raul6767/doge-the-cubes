@@ -25,32 +25,71 @@
       transform: translateX(-50%);
       font-size: 24px;
     }
+
+    #leaderboard {
+      position: absolute;
+      top: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 18px;
+    }
   </style>
 </head>
 <body>
 
 <div id="score">Score: 0</div>
+<div id="leaderboard"></div>
 <canvas id="gameCanvas"></canvas>
 
 <script>
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 const scoreDisplay = document.getElementById("score");
+const leaderboardDisplay = document.getElementById("leaderboard");
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-let player = {
-  x: canvas.width / 2,
-  y: canvas.height - 80,
-  size: 20,
-  speed: 8
-};
-
-let cubes = [];
-let score = 0;
-let gameOver = false;
+let player;
+let cubes;
+let score;
+let gameOver;
 let keys = {};
+
+let leaderboard = JSON.parse(localStorage.getItem("dogeLeaderboard")) || [];
+
+function initGame() {
+  player = {
+    x: canvas.width / 2,
+    y: canvas.height - 80,
+    size: 20,
+    speed: 8
+  };
+
+  cubes = [];
+  score = 0;
+  gameOver = false;
+}
+
+function saveScore(finalScore) {
+  const name = prompt("New Score! Enter your name:");
+
+  if (!name) return;
+
+  leaderboard.push({ name: name, score: finalScore });
+  leaderboard.sort((a, b) => b.score - a.score);
+  leaderboard = leaderboard.slice(0, 5);
+
+  localStorage.setItem("dogeLeaderboard", JSON.stringify(leaderboard));
+}
+
+function drawLeaderboard() {
+  leaderboardDisplay.innerHTML = "<b>🏆 Leaderboard</b><br>";
+  leaderboard.forEach((entry, index) => {
+    leaderboardDisplay.innerHTML += 
+      `${index + 1}. ${entry.name} - ${entry.score}<br>`;
+  });
+}
 
 document.addEventListener("keydown", (e) => {
   keys[e.key] = true;
@@ -86,14 +125,13 @@ function drawCubes() {
 
     ctx.fillRect(cube.x, cube.y, cube.size, cube.size);
 
-    // Collision
     if (
       cube.y + cube.size > player.y - player.size &&
       cube.x < player.x + player.size &&
       cube.x + cube.size > player.x - player.size &&
       cube.y < player.y + player.size
     ) {
-      gameOver = true;
+      endGame();
     }
 
     if (cube.y > canvas.height) {
@@ -103,16 +141,19 @@ function drawCubes() {
   });
 }
 
+function endGame() {
+  gameOver = true;
+  saveScore(score);
+  drawLeaderboard();
+  alert("Game Over! Final Score: " + score);
+  initGame();
+}
+
 function update() {
-  if (gameOver) {
-    alert("Game Over! Final Score: " + score);
-    document.location.reload();
-    return;
-  }
+  if (gameOver) return;
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Movement
   if (keys["ArrowLeft"]) {
     player.x -= player.speed;
   }
@@ -120,12 +161,11 @@ function update() {
     player.x += player.speed;
   }
 
-  // DIE IF TOUCH WALL
   if (
     player.x - player.size <= 0 ||
     player.x + player.size >= canvas.width
   ) {
-    gameOver = true;
+    endGame();
   }
 
   drawPlayer();
@@ -137,6 +177,9 @@ function update() {
 }
 
 setInterval(spawnCube, 800);
+
+initGame();
+drawLeaderboard();
 update();
 </script>
 
