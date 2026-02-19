@@ -11,11 +11,13 @@
       color: white;
       text-align: center;
     }
+
     canvas {
       display: block;
       margin: auto;
       background: transparent;
     }
+
     #score {
       position: absolute;
       top: 20px;
@@ -33,41 +35,44 @@
 <script>
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
-canvas.width = 500;
-canvas.height = 600;
+const scoreDisplay = document.getElementById("score");
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
 let player = {
   x: canvas.width / 2,
-  y: canvas.height - 40,
+  y: canvas.height - 80,
   size: 20,
-  speed: 6
+  speed: 8
 };
 
 let cubes = [];
 let score = 0;
 let gameOver = false;
-let spawnRate = 1000;
+let keys = {};
 
 document.addEventListener("keydown", (e) => {
-  if (e.key === "ArrowLeft") player.x -= player.speed;
-  if (e.key === "ArrowRight") player.x += player.speed;
+  keys[e.key] = true;
+});
+
+document.addEventListener("keyup", (e) => {
+  keys[e.key] = false;
 });
 
 function spawnCube() {
-  if (gameOver) return;
   cubes.push({
-    x: Math.random() * (canvas.width - 30),
-    y: -30,
-    size: 30,
-    speed: 3 + score * 0.05
+    x: Math.random() * canvas.width,
+    y: -20,
+    size: 20,
+    speed: 4 + Math.random() * 3
   });
-  setTimeout(spawnCube, spawnRate);
 }
 
 function drawPlayer() {
-  ctx.fillStyle = "#00ffff";
+  ctx.fillStyle = "cyan";
   ctx.beginPath();
-  ctx.moveTo(player.x, player.y);
+  ctx.moveTo(player.x, player.y - player.size);
   ctx.lineTo(player.x - player.size, player.y + player.size);
   ctx.lineTo(player.x + player.size, player.y + player.size);
   ctx.closePath();
@@ -75,34 +80,63 @@ function drawPlayer() {
 }
 
 function drawCubes() {
-  ctx.fillStyle = "#ff0033";
-  cubes.forEach(cube => {
+  ctx.fillStyle = "red";
+  cubes.forEach((cube, index) => {
     cube.y += cube.speed;
+
     ctx.fillRect(cube.x, cube.y, cube.size, cube.size);
 
+    // Collision
     if (
-      cube.y + cube.size > player.y &&
+      cube.y + cube.size > player.y - player.size &&
       cube.x < player.x + player.size &&
-      cube.x + cube.size > player.x - player.size
+      cube.x + cube.size > player.x - player.size &&
+      cube.y < player.y + player.size
     ) {
       gameOver = true;
-      alert("Game Over! Final Score: " + score);
-      document.location.reload();
+    }
+
+    if (cube.y > canvas.height) {
+      cubes.splice(index, 1);
+      score++;
     }
   });
 }
 
 function update() {
-  if (gameOver) return;
+  if (gameOver) {
+    alert("Game Over! Final Score: " + score);
+    document.location.reload();
+    return;
+  }
+
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Movement
+  if (keys["ArrowLeft"]) {
+    player.x -= player.speed;
+  }
+  if (keys["ArrowRight"]) {
+    player.x += player.speed;
+  }
+
+  // DIE IF TOUCH WALL
+  if (
+    player.x - player.size <= 0 ||
+    player.x + player.size >= canvas.width
+  ) {
+    gameOver = true;
+  }
+
   drawPlayer();
   drawCubes();
-  score++;
-  document.getElementById("score").innerText = "Score: " + score;
+
+  scoreDisplay.innerText = "Score: " + score;
+
   requestAnimationFrame(update);
 }
 
-spawnCube();
+setInterval(spawnCube, 800);
 update();
 </script>
 
