@@ -1,46 +1,3 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Doge The Cubes</title>
-  <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      background: radial-gradient(circle at center, #0b0f2a, #000000);
-      font-family: Arial, sans-serif;
-      color: white;
-      text-align: center;
-    }
-
-    canvas {
-      display: block;
-      margin: auto;
-      background: transparent;
-    }
-
-    #score {
-      position: absolute;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 24px;
-    }
-
-    #leaderboard {
-      position: absolute;
-      top: 60px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 18px;
-    }
-  </style>
-</head>
-<body>
-
-<div id="score">Score: 0</div>
-<div id="leaderboard"></div>
-<canvas id="gameCanvas"></canvas>
-
 <script>
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
@@ -56,7 +13,13 @@ let score;
 let gameOver;
 let keys = {};
 
+let spawnInterval = 800;
+let spawnTimer;
+let speedMultiplier = 1;
+
 let leaderboard = JSON.parse(localStorage.getItem("dogeLeaderboard")) || [];
+
+/* ================= GAME SETUP ================= */
 
 function initGame() {
   player = {
@@ -69,12 +32,17 @@ function initGame() {
   cubes = [];
   score = 0;
   gameOver = false;
+  speedMultiplier = 1;
+  spawnInterval = 800;
+
+  clearInterval(spawnTimer);
+  spawnTimer = setInterval(spawnCube, spawnInterval);
 }
 
-/* ✅ UPDATED SAVE FUNCTION (NO DUPLICATES) */
+/* ================= LEADERBOARD ================= */
+
 function saveScore(finalScore) {
   const name = prompt("Enter your name:");
-
   if (!name) return;
 
   const cleanName = name.trim();
@@ -84,7 +52,6 @@ function saveScore(finalScore) {
   );
 
   if (existingIndex !== -1) {
-    // Update only if higher
     if (finalScore > leaderboard[existingIndex].score) {
       leaderboard[existingIndex].score = finalScore;
     }
@@ -96,7 +63,6 @@ function saveScore(finalScore) {
   leaderboard = leaderboard.slice(0, 5);
 
   localStorage.setItem("dogeLeaderboard", JSON.stringify(leaderboard));
-
   drawLeaderboard();
 }
 
@@ -108,6 +74,8 @@ function drawLeaderboard() {
   });
 }
 
+/* ================= CONTROLS ================= */
+
 document.addEventListener("keydown", (e) => {
   keys[e.key] = true;
 });
@@ -116,14 +84,20 @@ document.addEventListener("keyup", (e) => {
   keys[e.key] = false;
 });
 
+/* ================= SPAWN SYSTEM ================= */
+
 function spawnCube() {
+  if (gameOver) return;
+
   cubes.push({
-    x: Math.random() * canvas.width,
+    x: Math.random() * (canvas.width - 20),
     y: -20,
     size: 20,
-    speed: 4 + Math.random() * 3
+    speed: (4 + Math.random() * 3) * speedMultiplier
   });
 }
+
+/* ================= DRAW PLAYER ================= */
 
 function drawPlayer() {
   ctx.fillStyle = "cyan";
@@ -135,13 +109,16 @@ function drawPlayer() {
   ctx.fill();
 }
 
+/* ================= DRAW CUBES ================= */
+
 function drawCubes() {
   ctx.fillStyle = "red";
+
   cubes.forEach((cube, index) => {
     cube.y += cube.speed;
-
     ctx.fillRect(cube.x, cube.y, cube.size, cube.size);
 
+    // Collision
     if (
       cube.y + cube.size > player.y - player.size &&
       cube.x < player.x + player.size &&
@@ -151,53 +128,62 @@ function drawCubes() {
       endGame();
     }
 
+    // Passed screen
     if (cube.y > canvas.height) {
       cubes.splice(index, 1);
       score++;
+
+      // Difficulty scaling every 5 score
+      if (score % 5 === 0) {
+        speedMultiplier += 0.25;
+
+        if (spawnInterval > 250) {
+          spawnInterval -= 50;
+          clearInterval(spawnTimer);
+          spawnTimer = setInterval(spawnCube, spawnInterval);
+        }
+      }
     }
   });
 }
 
+/* ================= GAME OVER ================= */
+
 function endGame() {
   gameOver = true;
+  clearInterval(spawnTimer);
   saveScore(score);
   alert("Game Over! Final Score: " + score);
   initGame();
 }
 
-function update() {
-  if (gameOver) return;
+/* ================= MAIN LOOP ================= */
 
+function update() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  if (keys["ArrowLeft"]) {
-    player.x -= player.speed;
-  }
-  if (keys["ArrowRight"]) {
-    player.x += player.speed;
-  }
+  if (!gameOver) {
+    if (keys["ArrowLeft"]) player.x -= player.speed;
+    if (keys["ArrowRight"]) player.x += player.speed;
 
-  if (
-    player.x - player.size <= 0 ||
-    player.x + player.size >= canvas.width
-  ) {
-    endGame();
+    if (
+      player.x - player.size <= 0 ||
+      player.x + player.size >= canvas.width
+    ) {
+      endGame();
+    }
+
+    drawCubes();
+    scoreDisplay.innerText = "Score: " + score;
   }
 
   drawPlayer();
-  drawCubes();
-
-  scoreDisplay.innerText = "Score: " + score;
-
   requestAnimationFrame(update);
 }
 
-setInterval(spawnCube, 800);
+/* ================= START ================= */
 
 initGame();
 drawLeaderboard();
 update();
 </script>
-
-</body>
-</html>
