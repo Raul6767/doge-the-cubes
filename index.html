@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Doge The Cubes</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: radial-gradient(circle at center, #0b0f2a, #000000);
+      font-family: Arial, sans-serif;
+      color: white;
+      text-align: center;
+    }
+    canvas {
+      display: block;
+      margin: auto;
+      background: transparent;
+    }
+    #score {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 24px;
+    }
+  </style>
+</head>
+<body>
+
+<div id="score">Score: 0</div>
+<canvas id="gameCanvas"></canvas>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+canvas.width = 500;
+canvas.height = 600;
+
+let player = {
+  x: canvas.width / 2,
+  y: canvas.height - 40,
+  size: 20,
+  speed: 6
+};
+
+let cubes = [];
+let score = 0;
+let gameOver = false;
+let spawnRate = 1000;
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "ArrowLeft") player.x -= player.speed;
+  if (e.key === "ArrowRight") player.x += player.speed;
+});
+
+function spawnCube() {
+  if (gameOver) return;
+  cubes.push({
+    x: Math.random() * (canvas.width - 30),
+    y: -30,
+    size: 30,
+    speed: 3 + score * 0.05
+  });
+  setTimeout(spawnCube, spawnRate);
+}
+
+function drawPlayer() {
+  ctx.fillStyle = "#00ffff";
+  ctx.beginPath();
+  ctx.moveTo(player.x, player.y);
+  ctx.lineTo(player.x - player.size, player.y + player.size);
+  ctx.lineTo(player.x + player.size, player.y + player.size);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawCubes() {
+  ctx.fillStyle = "#ff0033";
+  cubes.forEach(cube => {
+    cube.y += cube.speed;
+    ctx.fillRect(cube.x, cube.y, cube.size, cube.size);
+
+    if (
+      cube.y + cube.size > player.y &&
+      cube.x < player.x + player.size &&
+      cube.x + cube.size > player.x - player.size
+    ) {
+      gameOver = true;
+      alert("Game Over! Final Score: " + score);
+      document.location.reload();
+    }
+  });
+}
+
+function update() {
+  if (gameOver) return;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawPlayer();
+  drawCubes();
+  score++;
+  document.getElementById("score").innerText = "Score: " + score;
+  requestAnimationFrame(update);
+}
+
+spawnCube();
+update();
+</script>
+
+</body>
+</html>
